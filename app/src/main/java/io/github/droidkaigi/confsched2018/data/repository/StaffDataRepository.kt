@@ -6,9 +6,11 @@ import io.github.droidkaigi.confsched2018.data.local.LocalJsonParser
 import io.github.droidkaigi.confsched2018.data.local.StaffJsonMapper
 import io.github.droidkaigi.confsched2018.model.Staff
 import io.github.droidkaigi.confsched2018.util.rx.SchedulerProvider
-import io.reactivex.Completable
-import io.reactivex.Flowable
-import io.reactivex.Single
+import kotlinx.coroutines.experimental.CommonPool
+import kotlinx.coroutines.experimental.channels.ConflatedBroadcastChannel
+import kotlinx.coroutines.experimental.channels.ReceiveChannel
+import kotlinx.coroutines.experimental.launch
+import kotlinx.coroutines.experimental.yield
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -16,21 +18,20 @@ class StaffDataRepository @Inject constructor(
         private val context: Context,
         private val schedulerProvider: SchedulerProvider
 ) : StaffRepository {
-    @CheckResult override fun loadStaff(): Completable = getStaff()
-            .subscribeOn(schedulerProvider.io())
-            .toCompletable()
 
-    override val staff: Flowable<List<Staff>>
-        get() = getStaff().toFlowable().subscribeOn(schedulerProvider.io())
+    private val sender = ConflatedBroadcastChannel<List<Staff>>();
+    override val staff: ReceiveChannel<List<Staff>> = sender.openSubscription()
 
-    @CheckResult private fun getStaff(): Single<List<Staff>> {
-        return Single.create { emitter ->
+    override fun loadStaff() {
+        launch(CommonPool) {
             try {
-                val asset = LocalJsonParser.loadJsonFromAsset(context, "staff.json")
-                emitter.onSuccess(StaffJsonMapper.mapToStaffList(asset))
+                val asset = LocalJsonParser.loadJsonFromAsset(
+                        this@StaffDataRepository.context, "staff.json")
+                sender.offer(StaffJsonMapper.mapToStaffList(asset))
+                yield()
             } catch (e: Exception) {
                 Timber.e(e)
-                emitter.onError(e)
+                sender.close(e)
             }
         }
     }

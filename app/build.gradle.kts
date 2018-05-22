@@ -118,6 +118,7 @@ dependencies {
 
     // Kotlin
     implementation(Depends.Kotlin.stdlib)
+    implementation(Depends.Kotlin.kotlinx_coroutines)
     implementation(Depends.ktx)
 
 //    //==================== Support Library ====================

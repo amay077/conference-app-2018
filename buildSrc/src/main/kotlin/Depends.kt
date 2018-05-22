@@ -1,6 +1,7 @@
 object Depends {
     object Kotlin {
         val stdlib = "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${Versions.kotlin}"
+        val kotlinx_coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.22.5"
     }
 
     object Support {
